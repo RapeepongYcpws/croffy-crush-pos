@@ -1,0 +1,38 @@
+# Render Blueprint for the croffy-crush backend (free tier).
+# Deploy: Render Dashboard -> New -> Blueprint -> select this repo.
+#
+# The web service builds from the root Dockerfile (which bundles
+# database/schema.sql and runs the migrate step on startup).
+#
+# Set the secret/changeable values in the Render dashboard after the first
+# deploy: DATABASE_DSN, JWT_SECRET, CORS_ORIGIN, PROMPTPAY_ID.
+services:
+  - type: web
+    name: croffy-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      # DB connection string for a free managed MySQL (Aiven / TiDB).
+      # IMPORTANT: include &tls=true for hosted MySQL.
+      # Example:
+      #   user:pass@tcp(host:3306)/dbname?charset=utf8mb4&parseTime=true&loc=Local&tls=true
+      - key: DATABASE_DSN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # Set to your Vercel URL once known, e.g. https://croffy-crush.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PROMPTPAY_ID
+        sync: false
+      - key: POINTS_PER_BAHT
+        value: "10"
+      - key: JWT_EXPIRY_HOURS
+        value: "12"
