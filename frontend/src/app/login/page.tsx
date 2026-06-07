@@ -86,9 +86,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
+        {/* <p className="mt-6 text-center text-xs text-gray-400">
           ค่าเริ่มต้น: admin / admin123
-        </p>
+        </p> */}
       </div>
     </div>
   );
