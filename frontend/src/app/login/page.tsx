@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   // ถ้า login อยู่แล้วให้เด้งไป dashboard
   useEffect(() => {
+    console.log('API_BASE => ' , API_BASE)
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
 

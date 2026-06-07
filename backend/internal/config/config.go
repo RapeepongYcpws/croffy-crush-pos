@@ -24,7 +24,10 @@ type Config struct {
 
 // Load reads configuration from the environment (and an optional .env file).
 func Load() *Config {
-	_ = godotenv.Load()
+	// godotenv loads only ".env" by default. Load ".env.local" first so it
+	// takes priority (godotenv keeps the value from the first file loaded),
+	// then fall back to ".env". Missing files are ignored.
+	_ = godotenv.Load(".env.local", ".env")
 
 	cfg := &Config{
 		AppEnv:       getEnv("APP_ENV", "development"),
