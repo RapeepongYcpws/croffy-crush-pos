@@ -10,6 +10,7 @@ type FormState = {
   price: string;
   description: string;
   image_url: string;
+  category: string;
   is_active: boolean;
 };
 
@@ -18,6 +19,7 @@ const emptyForm: FormState = {
   price: "",
   description: "",
   image_url: "",
+  category: "",
   is_active: true,
 };
 
@@ -49,6 +51,18 @@ export default function MenuPage() {
   const [saving, setSaving] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("manual");
   const [dragId, setDragId] = useState<number | null>(null);
+
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((m) => m.category?.trim())
+            .filter((c): c is string => !!c)
+        )
+      ).sort((a, b) => a.localeCompare(b, "th")),
+    [items]
+  );
 
   const sortedItems = useMemo(() => {
     const arr = [...items];
@@ -116,6 +130,7 @@ export default function MenuPage() {
       price: String(m.price),
       description: m.description ?? "",
       image_url: m.image_url ?? "",
+      category: m.category ?? "",
       is_active: m.is_active,
     });
     setModalOpen(true);
@@ -146,6 +161,7 @@ export default function MenuPage() {
       price: parseFloat(form.price) || 0,
       description: form.description || null,
       image_url: form.image_url || null,
+      category: form.category.trim() || null,
       is_active: form.is_active,
     };
     try {
@@ -244,6 +260,9 @@ export default function MenuPage() {
               </div>
               {m.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{m.description}</p>}
               <div className="flex items-center gap-2 mt-3">
+                {m.category && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">{m.category}</span>
+                )}
                 {!m.is_active && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">ปิดขาย</span>
                 )}
@@ -281,6 +300,20 @@ export default function MenuPage() {
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               className="input"
             />
+          </Field>
+          <Field label="หมวดหมู่">
+            <input
+              list="menu-categories"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              placeholder="เช่น croffle, เครื่องดื่ม (เลือกหรือพิมพ์ใหม่)"
+              className="input"
+            />
+            <datalist id="menu-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </Field>
           <Field label="รูปภาพ">
             {form.image_url ? (

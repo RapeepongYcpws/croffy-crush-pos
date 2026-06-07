@@ -21,6 +21,7 @@ export default function OrderPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [orderType, setOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
 
   // add-on picker modal
   const [picking, setPicking] = useState<MenuItem | null>(null);
@@ -35,6 +36,26 @@ export default function OrderPage() {
     apiFetch<MenuItem[]>("/menu-items?active=1").then(setMenu).catch((e) => setError(e.message));
     apiFetch<Addon[]>("/addons?active=1").then(setAddons).catch(() => {});
   }, []);
+
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          menu
+            .map((m) => m.category?.trim())
+            .filter((c): c is string => !!c)
+        )
+      ).sort((a, b) => a.localeCompare(b, "th")),
+    [menu]
+  );
+
+  const filteredMenu = useMemo(
+    () =>
+      activeCategory === "all"
+        ? menu
+        : menu.filter((m) => (m.category?.trim() || "") === activeCategory),
+    [menu, activeCategory]
+  );
 
   const total = useMemo(
     () =>
@@ -103,8 +124,31 @@ export default function OrderPage() {
       <div className="lg:col-span-2 space-y-4">
         <h1 className="text-2xl font-bold text-gray-800">สั่งออเดอร์</h1>
         {error && <div className="rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveCategory("all")}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                activeCategory === "all" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              ทั้งหมด
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c}
+                onClick={() => setActiveCategory(c)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                  activeCategory === c ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {menu.map((m) => (
+          {filteredMenu.map((m) => (
             <button
               key={m.id}
               onClick={() => openPicker(m)}

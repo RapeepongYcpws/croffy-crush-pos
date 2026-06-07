@@ -17,12 +17,11 @@ export default function LoginPage() {
 
   // ถ้า login อยู่แล้วให้เด้งไป dashboard
   useEffect(() => {
-    console.log('API_BASE => ' , API_BASE)
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
 
-  const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL;
+  // const API_BASE =
+  // process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +51,7 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <div>{API_BASE}</div>
+            {/* <div>{API_BASE}</div> */}
             <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้</label>
             <input
               type="text"
