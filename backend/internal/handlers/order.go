@@ -39,8 +39,8 @@ type createOrderInput struct {
 // OrderDetail is the full order with items and add-ons.
 type OrderDetail struct {
 	models.Order
-	CustomerPhone *string             `json:"customer_phone"`
-	Items         []OrderItemDetail   `json:"items"`
+	CustomerPhone *string           `json:"customer_phone"`
+	Items         []OrderItemDetail `json:"items"`
 }
 
 type OrderItemDetail struct {
@@ -142,6 +142,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		 VALUES (?, ?, 'pending', 'unpaid', ?, ?, ?, ?)`,
 		orderNumber, in.OrderType, subtotal, discount, total, createdBy)
 	if err != nil {
+		log.Printf("create order insert failed (order_number=%s): %v", orderNumber, err)
 		httpx.Error(w, http.StatusInternalServerError, "failed to create order")
 		return
 	}
@@ -177,14 +178,21 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 // nextOrderNumber builds YYYYMMDD-#### scoped to the current day.
+// It derives the next sequence from the highest existing suffix (not COUNT)
+// so deleted/cancelled orders never cause a duplicate order_number collision.
 func nextOrderNumber(tx *sqlx.Tx) (string, error) {
 	today := time.Now().Format("20060102")
-	var count int
-	if err := tx.Get(&count,
-		`SELECT COUNT(*) FROM orders WHERE DATE(created_at) = CURDATE()`); err != nil {
+	var maxSuffix sql.NullInt64
+	if err := tx.Get(&maxSuffix,
+		`SELECT MAX(CAST(SUBSTRING(order_number, 10) AS UNSIGNED))
+		 FROM orders WHERE order_number LIKE ?`, today+"-%"); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s-%04d", today, count+1), nil
+	next := int64(1)
+	if maxSuffix.Valid {
+		next = maxSuffix.Int64 + 1
+	}
+	return fmt.Sprintf("%s-%04d", today, next), nil
 }
 
 // ListKitchen returns orders that still need to be prepared.
