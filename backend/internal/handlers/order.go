@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -126,27 +127,27 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		total = 0
 	}
 
-	orderNumber, err := nextOrderNumber(tx)
+	orderID, seq, err := nextOrderSeq(tx)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "could not generate order number")
+		httpx.Error(w, http.StatusInternalServerError, "could not generate order id")
 		return
 	}
+	orderNumber := fmt.Sprintf("%s-%04d", time.Now().Format("20060102"), seq)
 
 	var createdBy *uint64
 	if claims, ok := middleware.UserFromContext(r.Context()); ok {
 		createdBy = &claims.UserID
 	}
 
-	res, err := tx.Exec(
-		`INSERT INTO orders (order_number, order_type, status, payment_status, subtotal, discount, total, created_by)
-		 VALUES (?, ?, 'pending', 'unpaid', ?, ?, ?, ?)`,
-		orderNumber, in.OrderType, subtotal, discount, total, createdBy)
+	_, err = tx.Exec(
+		`INSERT INTO orders (id, order_number, order_type, status, payment_status, subtotal, discount, total, created_by)
+		 VALUES (?, ?, ?, 'pending', 'unpaid', ?, ?, ?, ?)`,
+		orderID, orderNumber, in.OrderType, subtotal, discount, total, createdBy)
 	if err != nil {
-		log.Printf("create order insert failed (order_number=%s): %v", orderNumber, err)
+		log.Printf("create order insert failed (id=%d, order_number=%s): %v", orderID, orderNumber, err)
 		httpx.Error(w, http.StatusInternalServerError, "failed to create order")
 		return
 	}
-	orderID, _ := res.LastInsertId()
 
 	for i, p := range prepared {
 		lineTotal := (p.unitPrice + p.addonsSum) * float64(p.qty)
@@ -177,22 +178,28 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	h.writeOrderDetail(w, uint64(orderID))
 }
 
-// nextOrderNumber builds YYYYMMDD-#### scoped to the current day.
-// It derives the next sequence from the highest existing suffix (not COUNT)
-// so deleted/cancelled orders never cause a duplicate order_number collision.
-func nextOrderNumber(tx *sqlx.Tx) (string, error) {
-	today := time.Now().Format("20060102")
-	var maxSuffix sql.NullInt64
-	if err := tx.Get(&maxSuffix,
-		`SELECT MAX(CAST(SUBSTRING(order_number, 10) AS UNSIGNED))
-		 FROM orders WHERE order_number LIKE ?`, today+"-%"); err != nil {
-		return "", err
+// nextOrderSeq derives the next order id and per-day sequence number.
+// The id is a human-readable, date-based value: YYYYMMDD followed by a 4-digit
+// sequence, e.g. 202606080001 (8 June 2026, order #1). It is assigned
+// explicitly (not AUTO_INCREMENT) so ids stay tidy and gap-free per day.
+// The sequence is derived from MAX(id) within the day's range so
+// deleted/cancelled orders never cause a duplicate-id collision.
+func nextOrderSeq(tx *sqlx.Tx) (id int64, seq int64, err error) {
+	prefix, err := strconv.ParseInt(time.Now().Format("20060102"), 10, 64)
+	if err != nil {
+		return 0, 0, err
 	}
-	next := int64(1)
-	if maxSuffix.Valid {
-		next = maxSuffix.Int64 + 1
+	base := prefix * 10000 // 20260608 * 10000 = 202606080000
+	var maxID sql.NullInt64
+	if err := tx.Get(&maxID,
+		`SELECT MAX(id) FROM orders WHERE id BETWEEN ? AND ?`, base+1, base+9999); err != nil {
+		return 0, 0, err
 	}
-	return fmt.Sprintf("%s-%04d", today, next), nil
+	seq = 1
+	if maxID.Valid {
+		seq = (maxID.Int64 - base) + 1
+	}
+	return base + seq, seq, nil
 }
 
 // ListKitchen returns orders that still need to be prepared.
