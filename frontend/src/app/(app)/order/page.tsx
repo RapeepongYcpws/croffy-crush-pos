@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
 import { apiFetch, baht, type MenuItem, type Addon, type OrderDetail } from "@/lib/api";
@@ -36,6 +36,60 @@ function writeCache<T>(key: string, value: T) {
   }
 }
 
+// LazyMenuImage fetches a single menu item's image only when the card scrolls
+// into view, caching it in sessionStorage so re-renders/navigation are instant.
+function LazyMenuImage({ id, alt }: { id: number; alt: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "150px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const cacheKey = `croffy_img_${id}`;
+    const cached = readCache<string>(cacheKey);
+    if (cached) {
+      setSrc(cached);
+      return;
+    }
+    apiFetch<{ image_url: string | null }>(`/menu-items/${id}/image`)
+      .then((d) => {
+        if (d.image_url) {
+          setSrc(d.image_url);
+          writeCache(cacheKey, d.image_url);
+        }
+      })
+      .catch(() => {});
+  }, [visible, id]);
+
+  return (
+    <div
+      ref={ref}
+      className="h-28 w-full bg-brand-100 flex items-center justify-center text-brand-400 text-sm"
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} loading="lazy" className="h-28 w-full object-cover" />
+      ) : null}
+    </div>
+  );
+}
+
 export default function OrderPage() {
   const router = useRouter();
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -61,7 +115,8 @@ export default function OrderPage() {
     const cachedAddons = readCache<Addon[]>(ADDONS_CACHE_KEY);
     if (cachedAddons) setAddons(cachedAddons);
 
-    apiFetch<MenuItem[]>("/menu-items?active=1")
+    // light=1 omits the heavy base64 images; they load lazily per card.
+    apiFetch<MenuItem[]>("/menu-items?active=1&light=1")
       .then((data) => {
         setMenu(data);
         writeCache(MENU_CACHE_KEY, data);
@@ -194,14 +249,7 @@ export default function OrderPage() {
               onClick={() => openPicker(m)}
               className="bg-white rounded-xl shadow-sm overflow-hidden text-left hover:ring-2 hover:ring-brand-400 transition"
             >
-              {m.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.image_url} alt={m.name} loading="lazy" className="h-28 w-full object-cover" />
-              ) : (
-                <div className="h-28 w-full bg-brand-100 flex items-center justify-center text-brand-400 text-sm">
-                  ไม่มีรูป
-                </div>
-              )}
+              <LazyMenuImage id={m.id} alt={m.name} />
               <div className="p-3">
                 <p className="font-medium text-gray-800 text-sm">{m.name}</p>
                 <p className="text-brand-700 font-bold text-sm">{baht(m.price)}</p>

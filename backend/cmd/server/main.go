@@ -59,6 +59,7 @@ func main() {
 
 	// Menu + add-ons
 	mux.Handle("GET /api/menu-items", protect(menuHandler.ListMenuItems))
+	mux.Handle("GET /api/menu-items/{id}/image", protect(menuHandler.GetMenuItemImage))
 	mux.Handle("POST /api/menu-items", protect(menuHandler.CreateMenuItem))
 	mux.Handle("PUT /api/menu-items/reorder", protect(menuHandler.ReorderMenuItems))
 	mux.Handle("PUT /api/menu-items/{id}", protect(menuHandler.UpdateMenuItem))
@@ -89,7 +90,6 @@ func main() {
 	// Global middleware (CORS) wraps the whole mux.
 	// handler := middleware.Chain(mux, middleware.CORS(cfg.CORSOrigin))
 	handler := middleware.Chain(mux, middleware.CORS("*"), middleware.RequestLogger)
-	
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -40,9 +40,15 @@ type menuItemInput struct {
 }
 
 // ListMenuItems returns all menu items (optionally only active via ?active=1).
+// Pass ?light=1 to omit the (potentially large base64) image_url for a fast,
+// small payload; clients then load images separately via GetMenuItemImage.
 func (h *MenuHandler) ListMenuItems(w http.ResponseWriter, r *http.Request) {
 	items := []models.MenuItem{}
-	query := `SELECT id, name, description, price, image_url, category, is_active, display_order, created_at, updated_at
+	imageCol := "image_url"
+	if r.URL.Query().Get("light") == "1" {
+		imageCol = "NULL AS image_url"
+	}
+	query := `SELECT id, name, description, price, ` + imageCol + `, category, is_active, display_order, created_at, updated_at
 	          FROM menu_items`
 	if r.URL.Query().Get("active") == "1" {
 		query += ` WHERE is_active = 1`
@@ -53,6 +59,31 @@ func (h *MenuHandler) ListMenuItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, items)
+}
+
+// GetMenuItemImage returns just the image_url for a single menu item, so the
+// list endpoint can stay light and images load lazily on demand.
+func (h *MenuHandler) GetMenuItemImage(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		httpx.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var img sql.NullString
+	err := h.db.Get(&img, `SELECT image_url FROM menu_items WHERE id=?`, id)
+	if err == sql.ErrNoRows {
+		httpx.Error(w, http.StatusNotFound, "not found")
+		return
+	}
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to load image")
+		return
+	}
+	var url *string
+	if img.Valid {
+		url = &img.String
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": id, "image_url": url})
 }
 
 func (h *MenuHandler) CreateMenuItem(w http.ResponseWriter, r *http.Request) {
