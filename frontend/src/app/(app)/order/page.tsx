@@ -14,6 +14,28 @@ type CartLine = {
   note: string;
 };
 
+const MENU_CACHE_KEY = "croffy_menu_cache_v1";
+const ADDONS_CACHE_KEY = "croffy_addons_cache_v1";
+
+function readCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota exceeded — ignore */
+  }
+}
+
 export default function OrderPage() {
   const router = useRouter();
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -33,8 +55,26 @@ export default function OrderPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    apiFetch<MenuItem[]>("/menu-items?active=1").then(setMenu).catch((e) => setError(e.message));
-    apiFetch<Addon[]>("/addons?active=1").then(setAddons).catch(() => {});
+    // Show cached data immediately (instant render), then revalidate in background.
+    const cachedMenu = readCache<MenuItem[]>(MENU_CACHE_KEY);
+    if (cachedMenu) setMenu(cachedMenu);
+    const cachedAddons = readCache<Addon[]>(ADDONS_CACHE_KEY);
+    if (cachedAddons) setAddons(cachedAddons);
+
+    apiFetch<MenuItem[]>("/menu-items?active=1")
+      .then((data) => {
+        setMenu(data);
+        writeCache(MENU_CACHE_KEY, data);
+      })
+      .catch((e) => {
+        if (!cachedMenu) setError(e.message);
+      });
+    apiFetch<Addon[]>("/addons?active=1")
+      .then((data) => {
+        setAddons(data);
+        writeCache(ADDONS_CACHE_KEY, data);
+      })
+      .catch(() => {});
   }, []);
 
   const categories = useMemo(
@@ -156,7 +196,7 @@ export default function OrderPage() {
             >
               {m.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.image_url} alt={m.name} className="h-28 w-full object-cover" />
+                <img src={m.image_url} alt={m.name} loading="lazy" className="h-28 w-full object-cover" />
               ) : (
                 <div className="h-28 w-full bg-brand-100 flex items-center justify-center text-brand-400 text-sm">
                   ไม่มีรูป
