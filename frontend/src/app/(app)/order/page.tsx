@@ -36,14 +36,20 @@ function writeCache<T>(key: string, value: T) {
   }
 }
 
+// In-memory cache of already-loaded images, kept for the lifetime of the page.
+// Switching category remounts the cards, so this lets them reuse the same image
+// instantly without re-reading storage or hitting the API again.
+const imageMemory = new Map<number, string>();
+
 // LazyMenuImage fetches a single menu item's image only when the card scrolls
-// into view, caching it in sessionStorage so re-renders/navigation are instant.
+// into view, caching it in memory + localStorage so re-renders/navigation are instant.
 function LazyMenuImage({ id, alt }: { id: number; alt: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  const [src, setSrc] = useState<string | null>(null);
+  const [src, setSrc] = useState<string | null>(() => imageMemory.get(id) ?? null);
 
   useEffect(() => {
+    if (src) return; // already have the image — no observer needed
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
@@ -57,25 +63,27 @@ function LazyMenuImage({ id, alt }: { id: number; alt: string }) {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [src]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || src) return;
     const cacheKey = `croffy_img_${id}`;
     const cached = readCache<string>(cacheKey);
     if (cached) {
+      imageMemory.set(id, cached);
       setSrc(cached);
       return;
     }
     apiFetch<{ image_url: string | null }>(`/menu-items/${id}/image`)
       .then((d) => {
         if (d.image_url) {
+          imageMemory.set(id, d.image_url);
           setSrc(d.image_url);
           writeCache(cacheKey, d.image_url);
         }
       })
       .catch(() => {});
-  }, [visible, id]);
+  }, [visible, src, id]);
 
   return (
     <div
