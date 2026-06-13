@@ -106,6 +106,7 @@ export default function OrderPage() {
   const [orderType, setOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [discount, setDiscount] = useState<string>("");
 
   // add-on picker modal
   const [picking, setPicking] = useState<MenuItem | null>(null);
@@ -169,6 +170,14 @@ export default function OrderPage() {
     [cart]
   );
 
+  const discountValue = useMemo(() => {
+    const n = parseFloat(discount);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [discount]);
+
+  const discountTooHigh = discountValue > total;
+  const grandTotal = Math.max(0, total - discountValue);
+
   const openPicker = (m: MenuItem) => {
     setPicking(m);
     setPickAddons([]);
@@ -199,12 +208,17 @@ export default function OrderPage() {
   const removeLine = (key: string) => setCart((c) => c.filter((l) => l.key !== key));
 
   const submit = async () => {
+    if (discountTooHigh) {
+      setError("ส่วนลดต้องไม่เกินราคารวม");
+      setConfirmOpen(false);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const body = {
         order_type: orderType,
-        discount: 0,
+        discount: discountValue,
         items: cart.map((l) => ({
           menu_item_id: l.menu.id,
           quantity: l.quantity,
@@ -321,13 +335,35 @@ export default function OrderPage() {
           })}
         </ul>
 
+        <div className="flex justify-between text-sm mt-4">
+          <span className="text-gray-500">ยอดรวม</span>
+          <span className="text-gray-700">{baht(total)}</span>
+        </div>
+
+        <div className="mt-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">ส่วนลด (บาท)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+            placeholder="0"
+            disabled={cart.length === 0}
+            className={`input ${discountTooHigh ? "border-red-400 focus:border-red-400" : ""}`}
+          />
+          {discountTooHigh && (
+            <p className="text-xs text-red-600 mt-1">ส่วนลดต้องไม่เกินยอดรวม {baht(total)}</p>
+          )}
+        </div>
+
         <div className="flex justify-between font-bold text-lg mt-4">
-          <span>รวม</span>
-          <span className="text-brand-700">{baht(total)}</span>
+          <span>สุทธิ</span>
+          <span className="text-brand-700">{baht(grandTotal)}</span>
         </div>
 
         <button
-          disabled={cart.length === 0}
+          disabled={cart.length === 0 || discountTooHigh}
           onClick={() => setConfirmOpen(true)}
           className="w-full mt-4 bg-brand-600 text-white py-2.5 rounded-lg font-semibold hover:bg-brand-700 disabled:opacity-50"
         >
@@ -385,13 +421,25 @@ export default function OrderPage() {
             </li>
           ))}
         </ul>
-        <div className="flex justify-between font-bold mb-4">
-          <span>รวม</span>
-          <span>{baht(total)}</span>
+        <div className="space-y-1 mb-4">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>ยอดรวม</span>
+            <span>{baht(total)}</span>
+          </div>
+          {discountValue > 0 && (
+            <div className="flex justify-between text-sm text-red-600">
+              <span>ส่วนลด</span>
+              <span>-{baht(discountValue)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold">
+            <span>สุทธิ</span>
+            <span>{baht(grandTotal)}</span>
+          </div>
         </div>
         <button
           onClick={submit}
-          disabled={submitting}
+          disabled={submitting || discountTooHigh}
           className="w-full bg-brand-600 text-white py-2.5 rounded-lg font-semibold hover:bg-brand-700 disabled:opacity-60"
         >
           {submitting ? "กำลังส่ง..." : "ยืนยันและไปหน้าชำระเงิน"}

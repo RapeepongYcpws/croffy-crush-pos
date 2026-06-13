@@ -45,8 +45,8 @@ export default function LoginPage() {
           <div className="h-14 w-14 rounded-2xl bg-brand-500 flex items-center justify-center text-white mb-3">
             <Cookie size={28} />
           </div>
-          <h1 className="text-2xl font-bold text-brand-700">croffy-crush</h1>
-          <p className="text-sm text-gray-500">เข้าสู่ระบบ POS</p>
+          <h1 className="text-2xl font-bold text-brand-700">Croffy Crush</h1>
+          <p className="text-sm text-gray-500">เข้าสู่ระบบ</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
