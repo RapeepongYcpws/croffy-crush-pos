@@ -48,6 +48,7 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 
 	// Loyalty (public — ลูกค้าสแกน QR บนมือถือตัวเอง ไม่ต้อง login)
+	mux.HandleFunc("GET /api/loyalty/points", paymentHandler.GetPointsByPhone)
 	mux.HandleFunc("GET /api/loyalty/{token}", paymentHandler.GetToken)
 	mux.HandleFunc("POST /api/loyalty/{token}/claim", paymentHandler.ClaimToken)
 	mux.HandleFunc("GET /api/rewards/available", rewardHandler.ListAvailable)

@@ -181,6 +181,34 @@ func (h *PaymentHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, info)
 }
 
+// GetPointsByPhone returns a customer's total points by phone (public endpoint
+// for the customer self-service points page). Phone is passed as ?phone=.
+func (h *PaymentHandler) GetPointsByPhone(w http.ResponseWriter, r *http.Request) {
+	phone := r.URL.Query().Get("phone")
+	if !thaiPhoneRe.MatchString(phone) {
+		httpx.Error(w, http.StatusBadRequest, "เบอร์โทรไม่ถูกต้อง (ต้องเป็น 10 หลักขึ้นต้นด้วย 0)")
+		return
+	}
+	var row struct {
+		ID          uint64 `db:"id"`
+		TotalPoints int    `db:"total_points"`
+	}
+	err := h.db.Get(&row, `SELECT id, total_points FROM customers WHERE phone=?`, phone)
+	if err == sql.ErrNoRows {
+		httpx.Error(w, http.StatusNotFound, "ไม่พบเบอร์นี้ในระบบสะสมคะแนน")
+		return
+	}
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "lookup failed")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"customer_id":  row.ID,
+		"phone":        phone,
+		"total_points": row.TotalPoints,
+	})
+}
+
 type claimInput struct {
 	Phone string `json:"phone"`
 }
