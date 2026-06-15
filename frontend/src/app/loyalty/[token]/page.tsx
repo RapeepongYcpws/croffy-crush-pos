@@ -26,7 +26,7 @@ const PHONE_RE = /^0[0-9]{9}$/;
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-brand-100 to-brand-300">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6">{children}</div>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-4">{children}</div>
     </div>
   );
 }
@@ -148,14 +148,17 @@ export default function LoyaltyPage() {
   }
 
   // Thank-you state
+  // if (result) {
   if (result) {
     return (
       <Shell>
         <div className="text-center space-y-3">
-          <PartyPopper className="mx-auto text-brand-500" size={44} />
-          <h1 className="text-xl font-bold text-gray-800">ขอบคุณที่อุดหนุน!</h1>
+          <div className=" h-24 flex justify-center">
+            <img src="/images/thanks.png" alt="Croffy Crush" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-800">ขอบพระคุณที่อุดหนุนนะคร้าบคุณลูกค้า🥰</h1>
           <p className="text-gray-600">
-            คุณได้รับ <b className="text-brand-700">{result.earned_points}</b> คะแนน
+            คุณได้รับ <b className="text-brand-700">{result.earned_points}</b> คะแนน🥳
           </p>
           <div className="bg-brand-50 rounded-xl py-3">
             <p className="text-sm text-gray-500">คะแนนสะสมทั้งหมด</p>
@@ -166,7 +169,7 @@ export default function LoyaltyPage() {
               onClick={openRewards}
               className="flex-1 flex items-center justify-center gap-2 bg-brand-600 text-white py-2.5 rounded-lg font-semibold hover:bg-brand-700"
             >
-              <Gift size={18} /> แลกของรางวัล
+              🎁 แลกของรางวัล
             </button>
             <button
               onClick={() => window.close()}
@@ -245,10 +248,10 @@ export default function LoyaltyPage() {
   return (
     <Shell>
       <div className="flex flex-col items-center mb-4">
-        <div className="h-12 w-12 rounded-2xl bg-brand-500 flex items-center justify-center text-white mb-2">
-          <Cookie size={24} />
+        <div className="h-24 w-24 rounded-2xl flex items-center justify-center text-white mb-2">
+            <img src="/images/logo.png" alt="Croffy Crush" />
         </div>
-        <h1 className="text-lg font-bold text-brand-700">สะสมคะแนน croffy-crush</h1>
+        <h1 className="text-lg font-bold text-brand-700">สะสมคะแนน Croffy Crush</h1>
         <p className="text-sm text-gray-500">รับ {info.points} คะแนนจากออเดอร์นี้</p>
       </div>
       <form onSubmit={submit} className="space-y-3">
