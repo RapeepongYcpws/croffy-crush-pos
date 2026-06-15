@@ -42,8 +42,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-brand-100 to-brand-300">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8">
         <div className="flex flex-col items-center mb-6">
-          <div className="h-14 w-14 rounded-2xl bg-brand-500 flex items-center justify-center text-white mb-3">
-            <Cookie size={28} />
+          <div className="h-24 w-24 rounded-2xl flex items-center justify-center text-white">
+            <img src="/images/logo.png" alt="Croffy Crush" />
           </div>
           <h1 className="text-2xl font-bold text-brand-700">Croffy Crush</h1>
           <p className="text-sm text-gray-500">เข้าสู่ระบบ</p>

@@ -6,6 +6,7 @@ import {
   Gift,
   BarChart3,
   Search,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/kitchen", label: "ครัว", icon: ChefHat },
   { href: "/menu", label: "จัดการเมนู", icon: UtensilsCrossed },
   { href: "/rewards", label: "จัดการรางวัล", icon: Gift },
+  { href: "/points", label: "เช็คคะแนน", icon: Sparkles },
   { href: "/reports", label: "รายงาน", icon: BarChart3 },
   { href: "/orders/search", label: "ค้นหาออเดอร์", icon: Search },
 ];

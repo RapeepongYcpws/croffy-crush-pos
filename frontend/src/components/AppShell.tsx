@@ -28,9 +28,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <Cookie size={22} className="text-brand-100" />
-            <span>croffy-crush</span>
+          <Link href="/order" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+            <img src="/images/logo.png" alt="Croffy Crush" className="h-12" />
+            <span>Croffy Crush</span>
           </Link>
 
           <div className="ml-auto flex items-center gap-3">
